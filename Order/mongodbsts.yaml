@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongostatefulset
+spec:
+  serviceName: db-mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-mongo
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app: db-mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: mongod-container
+          image: mongo:3.6
+          command:
+            - mongod
+            - "--bind_ip"
+            - 0.0.0.0
+          resources:
+            requests:
+              cpu: 0.2m
+              memory: 200Mi
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb
+              mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: hostpath
+      resources:
+        requests:
+          storage: 300Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-mongo
+spec:
+  selector:
+    app: db-mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+      nodePort: 31350
+  type: NodePort
